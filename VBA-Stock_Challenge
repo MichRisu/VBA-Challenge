@@ -1,0 +1,119 @@
+Option Explicit
+
+
+Sub loopticker()
+    'Set ws as object first to run the For Each loop
+    Dim ws As Object
+    
+    'Set For Each loop to work sub routine through whole workbook
+    For Each ws In Worksheets
+   
+        'Set tickerSym as string
+        Dim tickerSym As String
+        'Set the variables for calculations as long
+        Dim totalVol, openPrice, closePrice, i, yearlyChange, percentChange, lastrow, lastSummRow, summRow As Long
+            
+            'Set totalVol as 0 so that it resets
+            totalVol = 0
+            'Set openPrice at the first cell, but should loop through in the for loop
+            openPrice = ws.Cells(2, 3).Value
+            'Set summRow at the row it will start printing in
+            summRow = 2
+            
+                'Find the lastrow
+                lastrow = ws.Cells(Rows.Count, 1).End(xlUp).Row
+                       
+                    For i = 2 To lastrow
+                        'If the cells are not equal to each other then...
+                        If ws.Cells(i, 1).Value <> ws.Cells(i + 1, 1).Value Then
+                            'Set tickerSym for the matching symbols
+                            tickerSym = ws.Cells(i, 1).Value
+                                'Print tickerSym into column J
+                                ws.Range("J" & summRow).Value = tickerSym
+                            'Set totalVol formula
+                            totalVol = (totalVol + ws.Cells(i, 7).Value)
+                                'Print totalVol into column M
+                                ws.Range("M" & summRow).Value = totalVol / 1000
+                            'Set closePrice location
+                            closePrice = ws.Cells(i, 6).Value
+                            'Calculate the yearly change
+                            yearlyChange = (closePrice - openPrice)
+                                'Print yearlyChange to column K and set the currency style
+                                ws.Range("K" & summRow).Value = yearlyChange
+                                ws.Range("K" & summRow).Style = "Currency"
+                                    'Calculate for percentChange with if statement to prevent stocks with zero value from erroring.
+                                    If openPrice = 0 Then
+                                        percentChange = 0
+                                    Else
+                                        percentChange = yearlyChange / openPrice
+                                    End If
+                                'Print percentChange to column L
+                                ws.Range("L" & summRow).Value = percentChange
+                                'Format column L for %
+                                ws.Range("L" & summRow).NumberFormat = "0.00%"
+                                'Move the loop down the rows in summRow
+                                summRow = summRow + 1
+                                'Reset totalVol to 0 for next iteration
+                                totalVol = 0
+                                'Set openPrice location
+                                openPrice = ws.Cells(i + 1, 3)
+                        Else
+                            totalVol = totalVol + ws.Cells(i, 7).Value
+                        End If
+                    Next i
+            'Format the cells for summRow
+            ws.Range("J1") = "Ticker Symbol"
+            ws.Range("K1") = "Yearly Change"
+            ws.Range("L1") = "Percent Change"
+            ws.Range("M1") = "Total Volume /1000"
+            ws.Range("J:M").Columns.AutoFit
+    
+                'Find lastrow for SummRow
+                lastSummRow = ws.Cells(Rows.Count, 11).End(xlUp).Row
+                    'Set conditional for red or green colored cells based on value
+                    For i = 2 To lastSummRow
+                        If ws.Cells(i, 11) > 0 Then
+                            ws.Cells(i, 11).Interior.Color = RGB(0, 255, 0)
+                        Else
+                            ws.Cells(i, 11).Interior.Color = RGB(255, 0, 0)
+                        End If
+                    Next i
+            'Format rows and columns for the evaluation of the best and least performing stocks, per year.
+            ws.Cells(2, 15).Value = "Greatest % Increase"
+            ws.Cells(3, 15).Value = "Greatest % Decrease"
+            ws.Cells(4, 15).Value = "Greatest Total Volume/1000"
+            ws.Range("P1") = "Ticker Symbol"
+            ws.Range("Q1") = "Value"
+            ws.Range("O:Q").Columns.AutoFit
+        
+        'Set variables for evaluation calculations
+        Dim pctMax, pctMin As Double
+        Dim volMax As Double
+        
+        'For Loop to calculate maximum and minimum percent stock and the maximum volume per year.
+       For i = 2 To lastSummRow
+       
+            pctMax = ws.Application.WorksheetFunction.Max(ws.Range("L2:L" & summRow))
+            pctMin = ws.Application.WorksheetFunction.Min(ws.Range("L2:L" & summRow))
+            volMax = ws.Application.WorksheetFunction.Max(ws.Range("M2:M" & summRow))
+            
+            If ws.Cells(i, 12).Value = pctMax Then
+                ws.Cells(2, 16).Value = ws.Cells(i, 10).Value
+                ws.Cells(2, 17).Value = ws.Cells(i, 12).Value
+                ws.Cells(2, 17).NumberFormat = "0.00%"
+                
+            ElseIf ws.Cells(i, 12).Value = pctMin Then
+                ws.Cells(3, 16).Value = ws.Cells(i, 10).Value
+                ws.Cells(3, 17).Value = ws.Cells(i, 12).Value
+                ws.Cells(3, 17).NumberFormat = "0.00%"
+            End If
+            
+            If (ws.Cells(i, 13).Value = volMax) Then
+                ws.Cells(4, 16).Value = ws.Cells(i, 10).Value
+                ws.Cells(4, 17).Value = ws.Cells(i, 13).Value
+                
+            End If
+        Next i
+    Next ws
+    
+End Sub
